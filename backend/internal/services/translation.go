@@ -10,13 +10,19 @@ import (
 	"time"
 )
 
-type TranslationService struct {
-	apiKey  string
-	baseURL string
-	model   string
-	client  *http.Client
+// azureLangCodes maps our language codes to Azure Translator codes where they differ
+var azureLangCodes = map[string]string{
+	"zh-CN": "zh-Hans",
 }
 
+func toAzureLang(code string) string {
+	if mapped, ok := azureLangCodes[code]; ok {
+		return mapped
+	}
+	return code
+}
+
+// languageNames is used as fallback for LLM-based translation prompts
 var languageNames = map[string]string{
 	"ar":    "Arabic",
 	"en":    "English",
@@ -30,78 +36,134 @@ var languageNames = map[string]string{
 	"hi":    "Hindi",
 }
 
-func NewTranslationService(openRouterKey, openAIKey, model string) *TranslationService {
-	apiKey := openRouterKey
-	baseURL := "https://openrouter.ai/api/v1"
-	if apiKey == "" {
-		apiKey = openAIKey
-		baseURL = "https://api.openai.com/v1"
+type TranslationService struct {
+	// Azure Translator (fast dedicated API)
+	azureKey    string
+	azureRegion string
+
+	// LLM fallback (OpenRouter / OpenAI)
+	llmKey     string
+	llmBaseURL string
+	llmModel   string
+
+	client *http.Client
+}
+
+func NewTranslationService(openRouterKey, openAIKey, model, azureKey, azureRegion string) *TranslationService {
+	llmKey := openRouterKey
+	llmBaseURL := "https://openrouter.ai/api/v1"
+	if llmKey == "" {
+		llmKey = openAIKey
+		llmBaseURL = "https://api.openai.com/v1"
 	}
 	return &TranslationService{
-		apiKey:  apiKey,
-		baseURL: baseURL,
-		model:   model,
-		client:  &http.Client{Timeout: 10 * time.Second},
+		azureKey:    azureKey,
+		azureRegion: azureRegion,
+		llmKey:      llmKey,
+		llmBaseURL:  llmBaseURL,
+		llmModel:    model,
+		client:      &http.Client{Timeout: 8 * time.Second},
 	}
-}
-
-type chatRequest struct {
-	Model    string        `json:"model"`
-	Messages []chatMessage `json:"messages"`
-}
-
-type chatMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
-type chatResponse struct {
-	Choices []struct {
-		Message struct {
-			Content string `json:"content"`
-		} `json:"message"`
-	} `json:"choices"`
 }
 
 func (s *TranslationService) Translate(ctx context.Context, text, sourceLang, targetLang string) (string, error) {
 	if sourceLang == targetLang {
 		return text, nil
 	}
-	targetName := languageNames[targetLang]
-	if targetName == "" {
-		targetName = targetLang
+	if s.azureKey != "" {
+		return s.translateAzure(ctx, text, sourceLang, targetLang)
 	}
+	return s.translateLLM(ctx, text, sourceLang, targetLang)
+}
 
-	req := chatRequest{
-		Model: s.model,
-		Messages: []chatMessage{
-			{
-				Role:    "system",
-				Content: fmt.Sprintf("You are a translator. Translate the user's text to %s. Return ONLY the translated text, nothing else.", targetName),
-			},
-			{Role: "user", Content: text},
-		},
-	}
+// translateAzure uses Azure Cognitive Services Translator (~50-150ms, purpose-built)
+func (s *TranslationService) translateAzure(ctx context.Context, text, sourceLang, targetLang string) (string, error) {
+	body, _ := json.Marshal([]map[string]string{{"text": text}})
 
-	body, _ := json.Marshal(req)
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", s.baseURL+"/chat/completions", bytes.NewReader(body))
+	url := fmt.Sprintf(
+		"https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=%s&to=%s",
+		toAzureLang(sourceLang), toAzureLang(targetLang),
+	)
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
 	if err != nil {
 		return "", err
 	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+s.apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Ocp-Apim-Subscription-Key", s.azureKey)
+	if s.azureRegion != "" {
+		req.Header.Set("Ocp-Apim-Subscription-Region", s.azureRegion)
+	}
 
-	resp, err := s.client.Do(httpReq)
+	resp, err := s.client.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("translation API returned %d", resp.StatusCode)
+		return "", fmt.Errorf("azure translate returned %d", resp.StatusCode)
 	}
 
-	var result chatResponse
+	var result []struct {
+		Translations []struct {
+			Text string `json:"text"`
+		} `json:"translations"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", err
+	}
+	if len(result) == 0 || len(result[0].Translations) == 0 {
+		return "", fmt.Errorf("empty translation response")
+	}
+	return strings.TrimSpace(result[0].Translations[0].Text), nil
+}
+
+// translateLLM is the fallback when no Azure key is configured
+func (s *TranslationService) translateLLM(ctx context.Context, text, _, targetLang string) (string, error) {
+	targetName := languageNames[targetLang]
+	if targetName == "" {
+		targetName = targetLang
+	}
+
+	type chatMsg struct {
+		Role    string `json:"role"`
+		Content string `json:"content"`
+	}
+	type chatReq struct {
+		Model    string    `json:"model"`
+		Messages []chatMsg `json:"messages"`
+	}
+
+	body, _ := json.Marshal(chatReq{
+		Model: s.llmModel,
+		Messages: []chatMsg{
+			{Role: "system", Content: fmt.Sprintf("Translate to %s. Return ONLY the translated text.", targetName)},
+			{Role: "user", Content: text},
+		},
+	})
+
+	req, err := http.NewRequestWithContext(ctx, "POST", s.llmBaseURL+"/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+s.llmKey)
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("llm translate returned %d", resp.StatusCode)
+	}
+
+	var result struct {
+		Choices []struct {
+			Message struct{ Content string } `json:"message"`
+		} `json:"choices"`
+	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return "", err
 	}

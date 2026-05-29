@@ -5,15 +5,17 @@ import (
 )
 
 type Config struct {
-	Port             string
-	DatabaseURL      string
-	FrontendURL      string
-	DeepgramAPIKey   string
-	OpenRouterAPIKey string
-	OpenAIAPIKey     string
-	TranslationModel string
-	TLSCert          string
-	TLSKey           string
+	Port                  string
+	DatabaseURL           string
+	FrontendURL           string
+	DeepgramAPIKey        string
+	OpenRouterAPIKey      string
+	OpenAIAPIKey          string
+	TranslationModel      string
+	AzureTranslatorKey    string
+	AzureTranslatorRegion string
+	TLSCert               string
+	TLSKey                string
 }
 
 func Load() *Config {
@@ -32,8 +34,10 @@ func Load() *Config {
 		DeepgramAPIKey:   os.Getenv("DEEPGRAM_API_KEY"),
 		OpenRouterAPIKey: os.Getenv("OPENROUTER_API_KEY"),
 		OpenAIAPIKey:     os.Getenv("OPENAI_API_KEY"),
-		TranslationModel: model,
-		TLSCert:          os.Getenv("TLS_CERT"),
-		TLSKey:           os.Getenv("TLS_KEY"),
+		TranslationModel:      model,
+		AzureTranslatorKey:    os.Getenv("AZURE_TRANSLATOR_KEY"),
+		AzureTranslatorRegion: os.Getenv("AZURE_TRANSLATOR_REGION"),
+		TLSCert:               os.Getenv("TLS_CERT"),
+		TLSKey:                os.Getenv("TLS_KEY"),
 	}
 }

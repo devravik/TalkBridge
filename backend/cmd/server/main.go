@@ -38,6 +38,8 @@ func main() {
 		cfg.OpenRouterAPIKey,
 		cfg.OpenAIAPIKey,
 		cfg.TranslationModel,
+		cfg.AzureTranslatorKey,
+		cfg.AzureTranslatorRegion,
 	)
 
 	roomHandler := handlers.NewRoomHandler(pool, cfg.FrontendURL)
