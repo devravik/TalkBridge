@@ -1,4 +1,15 @@
 function buildIceServers(): RTCIceServer[] {
+  // If a full JSON ICE server list is provided, use it directly
+  const json = process.env.NEXT_PUBLIC_ICE_SERVERS_JSON
+  if (json) {
+    try {
+      return JSON.parse(json) as RTCIceServer[]
+    } catch {
+      console.warn('Invalid NEXT_PUBLIC_ICE_SERVERS_JSON, falling back to defaults')
+    }
+  }
+
+  // Fallback: Google STUN + optional single TURN
   const servers: RTCIceServer[] = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
