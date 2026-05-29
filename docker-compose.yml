@@ -13,24 +13,16 @@ services:
     ports:
       - "5432:5432"
 
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-
   backend:
     build: ./backend
     restart: unless-stopped
     env_file: .env
     environment:
       DATABASE_URL: postgres://talkbridge:talkbridge@postgres:5432/talkbridge?sslmode=disable
-      REDIS_URL: redis://redis:6379
     ports:
       - "8080:8080"
     depends_on:
       - postgres
-      - redis
 
   frontend:
     build: ./frontend

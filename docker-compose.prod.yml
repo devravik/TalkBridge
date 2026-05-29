@@ -12,24 +12,16 @@ services:
       - postgres_data:/var/lib/postgresql/data
     # Not exposed externally — only reachable by backend inside Docker network
 
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    command: redis-server --requirepass ${REDIS_PASSWORD}
-    # Not exposed externally
-
   backend:
     build: ./backend
     restart: unless-stopped
     env_file: .env.production
     environment:
       DATABASE_URL: postgres://talkbridge:${DB_PASSWORD}@postgres:5432/talkbridge?sslmode=disable
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       PORT: 8080
       FRONTEND_URL: https://${DOMAIN}
     depends_on:
       - postgres
-      - redis
 
   frontend:
     build:

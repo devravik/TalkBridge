@@ -39,7 +39,6 @@ cp .env.example .env
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `REDIS_URL` | Yes | Redis connection string |
 | `DEEPGRAM_API_KEY` | Yes | Speech-to-text ([get key](https://console.deepgram.com)) |
 | `OPENROUTER_API_KEY` | Yes* | Translation model via OpenRouter |
 | `OPENAI_API_KEY` | Yes* | Alternative: OpenAI directly |

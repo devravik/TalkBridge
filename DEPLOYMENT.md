@@ -137,9 +137,8 @@ HTTPS_PORT=7443
 # Domain
 DOMAIN=yourdomain.com
 
-# Secrets — use strong random values
+# Secrets — use a strong random value
 DB_PASSWORD=change_me_strong_db_password
-REDIS_PASSWORD=change_me_strong_redis_password
 
 # AI services
 DEEPGRAM_API_KEY=your_deepgram_key
@@ -232,7 +231,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.production \
   up -d --build --no-deps backend frontend
 ```
 
-The `--no-deps` flag rebuilds only the changed services; postgres/redis keep running and data is preserved.
+The `--no-deps` flag rebuilds only the changed services; postgres keeps running and data is preserved.
 
 ### Database backup
 

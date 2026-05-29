@@ -7,7 +7,6 @@ import (
 type Config struct {
 	Port             string
 	DatabaseURL      string
-	RedisURL         string
 	FrontendURL      string
 	DeepgramAPIKey   string
 	OpenRouterAPIKey string
@@ -29,7 +28,6 @@ func Load() *Config {
 	return &Config{
 		Port:             port,
 		DatabaseURL:      os.Getenv("DATABASE_URL"),
-		RedisURL:         os.Getenv("REDIS_URL"),
 		FrontendURL:      os.Getenv("FRONTEND_URL"),
 		DeepgramAPIKey:   os.Getenv("DEEPGRAM_API_KEY"),
 		OpenRouterAPIKey: os.Getenv("OPENROUTER_API_KEY"),
