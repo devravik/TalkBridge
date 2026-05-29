@@ -1,17 +1,9 @@
 import PageShell from '@/components/PageShell'
+import PolicySection from '@/components/PolicySection'
 
 export const metadata = {
   title: 'Privacy Policy — TalkBridge',
   description: 'How TalkBridge handles your data.',
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="mb-6 last:mb-0">
-      <h2 className="text-sm font-semibold text-white mb-2">{title}</h2>
-      <div className="text-sm text-gray-400 leading-relaxed space-y-2">{children}</div>
-    </div>
-  )
 }
 
 export default function PrivacyPage() {
@@ -30,53 +22,53 @@ export default function PrivacyPage() {
 
       <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-6">
 
-        <Section title="Video and audio">
+        <PolicySection title="Video and audio">
           <p>
             Video and audio streams travel directly between participants using WebRTC (peer-to-peer). They are <span className="text-gray-300">never routed through or stored on TalkBridge servers</span>. A TURN relay server is used only as a last resort when a direct connection cannot be established — it forwards encrypted packets and does not record or inspect them.
           </p>
-        </Section>
+        </PolicySection>
 
         <div className="border-t border-white/5" />
 
-        <Section title="Speech transcription">
+        <PolicySection title="Speech transcription">
           <p>
             To generate captions, audio chunks from your microphone are sent to <span className="text-gray-300">Deepgram</span> for real-time speech-to-text processing. Deepgram&apos;s own privacy policy governs how they handle that audio. TalkBridge does not retain raw audio.
           </p>
-        </Section>
+        </PolicySection>
 
         <div className="border-t border-white/5" />
 
-        <Section title="Transcripts and translations">
+        <PolicySection title="Transcripts and translations">
           <p>
             Transcribed and translated text is stored in a PostgreSQL database linked to your room session. This allows captions to be delivered to the other participant over WebSocket.
           </p>
           <p>
             Transcript records are tied to an anonymous room code — no name, email, or account is required. Room data expires automatically after the session ends.
           </p>
-        </Section>
+        </PolicySection>
 
         <div className="border-t border-white/5" />
 
-        <Section title="Translation">
+        <PolicySection title="Translation">
           <p>
             Transcript text is sent to <span className="text-gray-300">Azure Cognitive Services Translator</span> (primary) or an LLM via <span className="text-gray-300">OpenRouter</span> (fallback). These third-party services receive only the transcript text, not your audio or identity.
           </p>
-        </Section>
+        </PolicySection>
 
         <div className="border-t border-white/5" />
 
-        <Section title="No accounts, no tracking">
+        <PolicySection title="No accounts, no tracking">
           <p>
             TalkBridge requires no account, login, or personal information. There are no cookies beyond what is strictly necessary for session management, no analytics scripts, and no advertising.
           </p>
           <p>
             A room session ID is saved to <span className="text-gray-300">localStorage</span> in your browser solely to allow automatic rejoin if you refresh during a call. It is not used for tracking.
           </p>
-        </Section>
+        </PolicySection>
 
         <div className="border-t border-white/5" />
 
-        <Section title="Contact">
+        <PolicySection title="Contact">
           <p>
             Questions about this policy? Email{' '}
             <a href="mailto:dev.ravikgupt@gmail.com" className="text-indigo-400 hover:text-indigo-300 transition-colors">
@@ -84,7 +76,7 @@ export default function PrivacyPage() {
             </a>
             .
           </p>
-        </Section>
+        </PolicySection>
 
       </div>
     </PageShell>

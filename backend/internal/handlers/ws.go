@@ -144,6 +144,8 @@ func (h *WSHandler) HandleAudio(c *fiberws.Conn) {
 
 		// Final: translate for each other participant
 		others := h.hub.GetOthers(roomCode, participantID)
+		// Fetch room once for all transcript saves rather than once per goroutine
+		room, _ := models.GetRoomByCode(context.Background(), h.db, roomCode)
 		for _, other := range others {
 			targetLang := other.Language
 			go func(targetLang, targetID string) {
@@ -154,9 +156,8 @@ func (h *WSHandler) HandleAudio(c *fiberws.Conn) {
 				}
 
 				// Save transcript to DB
-				go func() {
-					room, err := models.GetRoomByCode(context.Background(), h.db, roomCode)
-					if err == nil {
+				if room != nil {
+					go func() {
 						t := &models.Transcript{
 							RoomID:         room.ID,
 							ParticipantID:  participantID,
@@ -166,8 +167,8 @@ func (h *WSHandler) HandleAudio(c *fiberws.Conn) {
 							TargetLanguage: targetLang,
 						}
 						models.SaveTranscript(context.Background(), h.db, t)
-					}
-				}()
+					}()
+				}
 
 				caption, _ := json.Marshal(fiber_map{
 					"type":     "caption",

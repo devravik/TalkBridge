@@ -9,20 +9,22 @@ interface CaptionOverlayProps {
 
 export function CaptionOverlay({ captions }: CaptionOverlayProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const [userScrolled, setUserScrolled] = useState(false)
+  const userScrolledRef = useRef(false)
+  const [showNudge, setShowNudge] = useState(false)
 
   // Auto-scroll to bottom unless user has scrolled up to read history
   useEffect(() => {
     const el = scrollRef.current
-    if (!el || userScrolled) return
+    if (!el || userScrolledRef.current) return
     el.scrollTop = el.scrollHeight
-  }, [captions, userScrolled])
+  }, [captions])
 
   function handleScroll() {
     const el = scrollRef.current
     if (!el) return
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40
-    setUserScrolled(!atBottom)
+    const scrolledUp = el.scrollHeight - el.scrollTop - el.clientHeight >= 40
+    userScrolledRef.current = scrolledUp
+    setShowNudge(scrolledUp)
   }
 
   if (captions.length === 0) return null
@@ -64,11 +66,12 @@ export function CaptionOverlay({ captions }: CaptionOverlayProps) {
       </div>
 
       {/* Scroll-to-bottom nudge when user has scrolled up */}
-      {userScrolled && (
+      {showNudge && (
         <button
           className="pointer-events-auto absolute bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 text-white/80 text-xs backdrop-blur-sm border border-white/10 hover:bg-black/80 transition-colors"
           onClick={() => {
-            setUserScrolled(false)
+            userScrolledRef.current = false
+            setShowNudge(false)
             if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
           }}
         >

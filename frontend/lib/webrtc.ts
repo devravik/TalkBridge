@@ -5,7 +5,13 @@ function buildIceServers(): RTCIceServer[] {
     try {
       return JSON.parse(json) as RTCIceServer[]
     } catch {
-      console.warn('Invalid NEXT_PUBLIC_ICE_SERVERS_JSON, falling back to defaults')
+      if (process.env.NODE_ENV !== 'production') {
+        throw new Error('Invalid NEXT_PUBLIC_ICE_SERVERS_JSON — fix this before continuing')
+      }
+      console.error(
+        'Invalid NEXT_PUBLIC_ICE_SERVERS_JSON — falling back to STUN-only. ' +
+        'Calls behind strict NAT will fail. Check your deployment config.'
+      )
     }
   }
 

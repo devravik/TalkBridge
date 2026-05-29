@@ -17,6 +17,7 @@ export default function CallPage() {
   const params = useParams()
   const router = useRouter()
   const roomId = params.roomId as string
+  const sessionKey = `talkbridge-room-${roomId}`
 
   const [callState, setCallState] = useState<CallState>('lobby')
   const [language, setLanguage] = useState('en')
@@ -40,6 +41,7 @@ export default function CallPage() {
   const audioCaptureRef = useRef<AudioCapture | null>(null)
   const captionIdRef = useRef(0)
   const cleaningUp = useRef(false)
+  const linkCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const addCaption = useCallback((text: string, from: string, lang: string, isFinal: boolean, isOwn: boolean) => {
     setCaptions((prev) => {
@@ -60,33 +62,47 @@ export default function CallPage() {
   }, [])
 
   useEffect(() => {
-    return () => cleanup()
+    return () => {
+      cleanup()
+      if (linkCopiedTimerRef.current) clearTimeout(linkCopiedTimerRef.current)
+    }
   }, [cleanup])
 
   // On mount: check for a saved session for this room and auto-rejoin
   useEffect(() => {
-    const saved = localStorage.getItem(`talkbridge-room-${roomId}`)
-    if (saved) {
-      const { language: savedLang } = JSON.parse(saved)
-      setLanguage(savedLang)
-      joinRoom(roomId, savedLang)
-        .then((res) => {
-          setParticipantId(res.participant_id)
-          setCallState('connecting')
-          return startCall(res.participant_id, res.language)
-        })
-        .catch((e: any) => {
-          // Room ended or not found — clear saved session and show lobby/ended
-          localStorage.removeItem(`talkbridge-room-${roomId}`)
-          if (e.message?.includes('ended')) {
-            setCallState('ended')
-          } else {
-            setAutoJoining(false)
-          }
-        })
-    } else {
+    let cancelled = false
+    const saved = localStorage.getItem(sessionKey)
+    if (!saved) {
       setAutoJoining(false)
+      return
     }
+    let savedLang: string
+    try {
+      savedLang = (JSON.parse(saved) as { language: string }).language
+    } catch {
+      localStorage.removeItem(sessionKey)
+      setAutoJoining(false)
+      return
+    }
+    setLanguage(savedLang)
+    joinRoom(roomId, savedLang)
+      .then((res) => {
+        if (cancelled) return
+        setAutoJoining(false)
+        setParticipantId(res.participant_id)
+        setCallState('connecting')
+        return startCall(res.participant_id, res.language)
+      })
+      .catch((e: any) => {
+        if (cancelled) return
+        localStorage.removeItem(sessionKey)
+        if (e.message?.includes('ended')) {
+          setCallState('ended')
+        } else {
+          setAutoJoining(false)
+        }
+      })
+    return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId])
 
@@ -102,7 +118,7 @@ export default function CallPage() {
     setJoinError('')
     try {
       const res = await joinRoom(roomId, language)
-      localStorage.setItem(`talkbridge-room-${roomId}`, JSON.stringify({ language: res.language }))
+      localStorage.setItem(sessionKey, JSON.stringify({ language: res.language }))
       setParticipantId(res.participant_id)
       setCallState('connecting')
       await startCall(res.participant_id, res.language)
@@ -224,7 +240,7 @@ export default function CallPage() {
 
   function handleCallEnded() {
     cleanup()
-    localStorage.removeItem(`talkbridge-room-${roomId}`)
+    localStorage.removeItem(sessionKey)
     setCallState('ended')
   }
 
@@ -250,7 +266,7 @@ export default function CallPage() {
     try {
       await navigator.clipboard.writeText(url)
       setLinkCopied(true)
-      setTimeout(() => setLinkCopied(false), 2500)
+      linkCopiedTimerRef.current = setTimeout(() => setLinkCopied(false), 2500)
     } catch {
       // fallback: show the URL
       window.prompt('Share this link:', url)

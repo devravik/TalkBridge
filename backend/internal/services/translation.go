@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -71,7 +72,14 @@ func (s *TranslationService) Translate(ctx context.Context, text, sourceLang, ta
 		return text, nil
 	}
 	if s.azureKey != "" {
-		return s.translateAzure(ctx, text, sourceLang, targetLang)
+		result, err := s.translateAzure(ctx, text, sourceLang, targetLang)
+		if err == nil {
+			return result, nil
+		}
+		log.Printf("azure translation failed (%v), falling back to LLM", err)
+		if s.llmKey == "" {
+			return "", err
+		}
 	}
 	return s.translateLLM(ctx, text, sourceLang, targetLang)
 }
