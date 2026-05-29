@@ -59,14 +59,12 @@ export default function CallPage() {
     return () => cleanup()
   }, [cleanup])
 
-  // Purge old captions periodically
+  // Keep last 200 captions to avoid unbounded memory growth
   useEffect(() => {
-    const id = setInterval(() => {
-      const cutoff = Date.now() - 10000
-      setCaptions((prev) => prev.filter((c) => c.timestamp > cutoff))
-    }, 2000)
-    return () => clearInterval(id)
-  }, [])
+    if (captions.length > 200) {
+      setCaptions((prev) => prev.slice(-200))
+    }
+  }, [captions.length])
 
   async function handleJoin() {
     setJoining(true)
