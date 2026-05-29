@@ -11,6 +11,7 @@ import { CaptionOverlay } from '@/components/CaptionOverlay'
 import { CallControls } from '@/components/CallControls'
 import { LanguageSelector } from '@/components/LanguageSelector'
 import type { Caption, CallState, SignalingMessage } from '@/types'
+import type { AudioOutputDevice } from '@/components/CallControls'
 
 export default function CallPage() {
   const params = useParams()
@@ -30,6 +31,8 @@ export default function CallPage() {
   const [participantId, setParticipantId] = useState('')
   const [linkCopied, setLinkCopied] = useState(false)
   const [connectionState, setConnectionState] = useState<RTCPeerConnectionState>('new')
+  const [audioOutputDevices, setAudioOutputDevices] = useState<AudioOutputDevice[]>([])
+  const [audioOutputDeviceId, setAudioOutputDeviceId] = useState<string>('')
 
   const signalingRef = useRef<SignalingSocket | null>(null)
   const audioSocketRef = useRef<AudioSocket | null>(null)
@@ -131,6 +134,19 @@ export default function CallPage() {
 
     const stream = await webrtc.init(true, true)
     setLocalStream(stream)
+
+    // Enumerate audio output devices (requires getUserMedia to have been called first)
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices?.enumerateDevices) {
+      navigator.mediaDevices.enumerateDevices().then((devices) => {
+        const outputs = devices
+          .filter((d) => d.kind === 'audiooutput')
+          .map((d) => ({ deviceId: d.deviceId, label: d.label || `Speaker ${d.deviceId.slice(0, 6)}` }))
+        setAudioOutputDevices(outputs)
+        // Default to the first non-default device if available
+        const preferred = outputs.find((d) => d.deviceId !== 'default') || outputs[0]
+        if (preferred) setAudioOutputDeviceId(preferred.deviceId)
+      }).catch(() => { /* not supported */ })
+    }
 
     // Set up signaling WebSocket
     const signaling = new SignalingSocket()
@@ -356,7 +372,7 @@ export default function CallPage() {
     <main className="h-screen w-screen overflow-hidden relative" style={{ background: '#0a0a0f' }}>
       {/* Video grid */}
       <div className="absolute inset-0">
-        <VideoGrid localStream={localStream} remoteStream={remoteStream} />
+        <VideoGrid localStream={localStream} remoteStream={remoteStream} audioOutputDeviceId={audioOutputDeviceId} />
       </div>
 
       {/* Top bar */}
@@ -396,6 +412,9 @@ export default function CallPage() {
         onToggleVideo={handleToggleVideo}
         onEndCall={handleEndCall}
         onShareLink={handleShareLink}
+        audioOutputDevices={audioOutputDevices}
+        audioOutputDeviceId={audioOutputDeviceId}
+        onAudioOutputChange={setAudioOutputDeviceId}
       />
     </main>
   )

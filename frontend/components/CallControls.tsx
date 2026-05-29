@@ -1,5 +1,12 @@
 'use client'
 
+import { useState } from 'react'
+
+export interface AudioOutputDevice {
+  deviceId: string
+  label: string
+}
+
 interface CallControlsProps {
   audioEnabled: boolean
   videoEnabled: boolean
@@ -7,7 +14,9 @@ interface CallControlsProps {
   onToggleVideo: () => void
   onEndCall: () => void
   onShareLink?: () => void
-  shareLink?: string
+  audioOutputDevices?: AudioOutputDevice[]
+  audioOutputDeviceId?: string
+  onAudioOutputChange?: (deviceId: string) => void
 }
 
 function ControlButton({
@@ -59,10 +68,40 @@ export function CallControls({
   onToggleVideo,
   onEndCall,
   onShareLink,
-  shareLink,
+  audioOutputDevices = [],
+  audioOutputDeviceId,
+  onAudioOutputChange,
 }: CallControlsProps) {
+  const [showSpeakerPicker, setShowSpeakerPicker] = useState(false)
+
   return (
-    <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-6 px-6 pb-6 pt-8 bg-gradient-to-t from-black/60 to-transparent">
+    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent">
+      {/* Speaker picker popup */}
+      {showSpeakerPicker && audioOutputDevices.length > 0 && (
+        <div className="mx-auto mb-2 w-72 rounded-2xl bg-black/80 backdrop-blur-md border border-white/10 overflow-hidden">
+          <div className="px-4 py-2.5 text-xs text-white/50 font-medium border-b border-white/10">Audio output</div>
+          {audioOutputDevices.map((dev) => (
+            <button
+              key={dev.deviceId}
+              onClick={() => { onAudioOutputChange?.(dev.deviceId); setShowSpeakerPicker(false) }}
+              className={`w-full text-left px-4 py-3 text-sm flex items-center gap-3 hover:bg-white/10 transition-colors
+                ${audioOutputDeviceId === dev.deviceId ? 'text-indigo-400' : 'text-white/80'}`}
+            >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 6v12m0 0l-3-3m3 3l3-3M6.343 9.657a8 8 0 000 4.686" />
+              </svg>
+              <span className="truncate">{dev.label || `Speaker ${dev.deviceId.slice(0, 6)}`}</span>
+              {audioOutputDeviceId === dev.deviceId && (
+                <svg className="w-4 h-4 ml-auto flex-shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+    <div className="flex items-center justify-center gap-6 px-6 pb-6 pt-4">
       {/* Mute toggle */}
       <ControlButton active={audioEnabled} onClick={onToggleAudio} label={audioEnabled ? 'Mute' : 'Unmute'}>
         {audioEnabled ? (
@@ -104,6 +143,21 @@ export function CallControls({
           </svg>
         </ControlButton>
       )}
+
+      {/* Speaker output selector — only shown when browser supports setSinkId */}
+      {audioOutputDevices.length > 0 && (
+        <ControlButton
+          active={showSpeakerPicker}
+          onClick={() => setShowSpeakerPicker((v) => !v)}
+          label="Speaker"
+        >
+          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 6v12m-3-9l-4 4H3v-2a1 1 0 011-1h2l4-4zm0 6l-4-4" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9l6 6M9 15l6-6" />
+          </svg>
+        </ControlButton>
+      )}
+    </div>
     </div>
   )
 }

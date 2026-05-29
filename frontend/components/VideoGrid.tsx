@@ -6,7 +6,7 @@ interface VideoGridProps {
   localStream: MediaStream | null
   remoteStream: MediaStream | null
   localMuted?: boolean
-  remoteParticipantId?: string
+  audioOutputDeviceId?: string
 }
 
 function VideoTile({
@@ -14,11 +14,13 @@ function VideoTile({
   muted = false,
   label,
   isLocal = false,
+  audioOutputDeviceId,
 }: {
   stream: MediaStream | null
   muted?: boolean
   label?: string
   isLocal?: boolean
+  audioOutputDeviceId?: string
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
 
@@ -27,6 +29,14 @@ function VideoTile({
       videoRef.current.srcObject = stream
     }
   }, [stream])
+
+  useEffect(() => {
+    const el = videoRef.current as any
+    if (!el || !audioOutputDeviceId || !el.setSinkId) return
+    el.setSinkId(audioOutputDeviceId).catch(() => {
+      // setSinkId not supported or permission denied — silently ignore
+    })
+  }, [audioOutputDeviceId])
 
   return (
     <div
@@ -67,14 +77,14 @@ function VideoTile({
   )
 }
 
-export function VideoGrid({ localStream, remoteStream, localMuted = true }: VideoGridProps) {
+export function VideoGrid({ localStream, remoteStream, localMuted = true, audioOutputDeviceId }: VideoGridProps) {
   const hasRemote = !!remoteStream
 
   return (
     <div className="relative w-full h-full">
       {/* Remote video fills the frame */}
       <div className="w-full h-full">
-        <VideoTile stream={remoteStream} label={hasRemote ? 'Participant' : undefined} />
+        <VideoTile stream={remoteStream} label={hasRemote ? 'Participant' : undefined} audioOutputDeviceId={audioOutputDeviceId} />
         {!hasRemote && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
             <div className="w-16 h-16 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center">
