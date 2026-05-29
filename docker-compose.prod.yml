@@ -48,8 +48,8 @@ services:
     image: nginx:1.25-alpine
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "${HTTP_PORT:-7080}:80"
+      - "${HTTPS_PORT:-7443}:443"
     volumes:
       - ./nginx/talkbridge.conf:/etc/nginx/conf.d/default.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
