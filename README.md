@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://socialify.git.ci/devravik/TalkBridge/image?description=1&font=Inter&language=1&name=1&owner=1&pattern=Solid&theme=Dark" />
+  <img alt="TalkBridge" src="https://socialify.git.ci/devravik/TalkBridge/image?description=1&font=Inter&language=1&name=1&owner=1&pattern=Solid&theme=Light" />
+</picture>
+
 # TalkBridge
 
 **Real-time video calls with live AI-translated captions — no app, no account, just a link.**
