@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createRoom } from '@/lib/api'
 
@@ -99,6 +100,17 @@ export default function HomePage() {
             {lang}
           </span>
         ))}
+      </div>
+
+      {/* Footer */}
+      <div className="mt-10 flex items-center gap-4 text-xs text-gray-700">
+        <Link href="/about" className="hover:text-gray-400 transition-colors">About</Link>
+        <span>·</span>
+        <Link href="/privacy" className="hover:text-gray-400 transition-colors">Privacy</Link>
+        <span>·</span>
+        <Link href="/terms" className="hover:text-gray-400 transition-colors">Terms</Link>
+        <span>·</span>
+        <a href="https://github.com/devravik/TalkBridge" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">GitHub</a>
       </div>
     </main>
   )
