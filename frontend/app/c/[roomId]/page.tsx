@@ -21,6 +21,7 @@ export default function CallPage() {
   const [language, setLanguage] = useState('en')
   const [joinError, setJoinError] = useState('')
   const [joining, setJoining] = useState(false)
+  const [autoJoining, setAutoJoining] = useState(true) // true while checking for saved session
   const [audioEnabled, setAudioEnabled] = useState(true)
   const [videoEnabled, setVideoEnabled] = useState(true)
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
@@ -59,6 +60,33 @@ export default function CallPage() {
     return () => cleanup()
   }, [cleanup])
 
+  // On mount: check for a saved session for this room and auto-rejoin
+  useEffect(() => {
+    const saved = localStorage.getItem(`talkbridge-room-${roomId}`)
+    if (saved) {
+      const { language: savedLang } = JSON.parse(saved)
+      setLanguage(savedLang)
+      joinRoom(roomId, savedLang)
+        .then((res) => {
+          setParticipantId(res.participant_id)
+          setCallState('connecting')
+          return startCall(res.participant_id, res.language)
+        })
+        .catch((e: any) => {
+          // Room ended or not found — clear saved session and show lobby/ended
+          localStorage.removeItem(`talkbridge-room-${roomId}`)
+          if (e.message?.includes('ended')) {
+            setCallState('ended')
+          } else {
+            setAutoJoining(false)
+          }
+        })
+    } else {
+      setAutoJoining(false)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId])
+
   // Keep last 200 captions to avoid unbounded memory growth
   useEffect(() => {
     if (captions.length > 200) {
@@ -71,6 +99,7 @@ export default function CallPage() {
     setJoinError('')
     try {
       const res = await joinRoom(roomId, language)
+      localStorage.setItem(`talkbridge-room-${roomId}`, JSON.stringify({ language: res.language }))
       setParticipantId(res.participant_id)
       setCallState('connecting')
       await startCall(res.participant_id, res.language)
@@ -179,6 +208,7 @@ export default function CallPage() {
 
   function handleCallEnded() {
     cleanup()
+    localStorage.removeItem(`talkbridge-room-${roomId}`)
     setCallState('ended')
   }
 
@@ -209,6 +239,15 @@ export default function CallPage() {
       // fallback: show the URL
       window.prompt('Share this link:', url)
     }
+  }
+
+  // ── Auto-joining (checking saved session) ─────────────────────────────
+  if (autoJoining && callState === 'lobby') {
+    return (
+      <main className="min-h-screen flex items-center justify-center" style={{ background: '#0a0a0f' }}>
+        <div className="w-8 h-8 rounded-full border-2 border-indigo-500/30 border-t-indigo-500 animate-spin" />
+      </main>
+    )
   }
 
   // ── Lobby ──────────────────────────────────────────────────────────────
